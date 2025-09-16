@@ -16,28 +16,35 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
     defaults:
       run:
         shell: bash
 
     steps:
-    # Checkout the repository to the GitHub Actions runner
-    - name: Checkout code
-      uses: actions/checkout@v4
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: latest
-        
-    - name: terraform init
-      working-directory: ./todoapp-infra
-      run: terraform init
-      env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      
+      # Step 2: Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: latest
+
+      # Step 3: Install jq (to parse JSON secret)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # Step 4: Parse Azure Credentials JSON secret
+      - name: Set Azure Credentials
+        run: |
+          echo "${{ secrets.AZURE_CREDENTIALS }}" > azure.json
+          echo "ARM_CLIENT_ID=$(jq -r .clientId azure.json)" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=$(jq -r .clientSecret azure.json)" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=$(jq -r .subscriptionId azure.json)" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=$(jq -r .tenantId azure.json)" >> $GITHUB_ENV
+
+      # Step 5: Terraform Init
+      - name: Terraform Init
+        working-directory: ./todoapp_infra
+        run: terraform init
