@@ -48,3 +48,6 @@ jobs:
       - name: Terraform Init
         working-directory: ./todoapp_infra
         run: terraform init
+      - name: Terraform plan
+        working-directory: ./todoapp_infra
+        run: terraform plan -out=tfplan
